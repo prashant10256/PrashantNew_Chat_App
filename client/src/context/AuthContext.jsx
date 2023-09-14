@@ -18,8 +18,8 @@ export const AuthContextProvider = ({children}) =>{
     const [loginError, setLoginError] = useState(null);
     const [isLoginLoading, setIsLoginLoading] = useState(false);
     const [loginInfo, setLoginInfo] =  useState({
-        email: "",
-        password: ""
+        email: "dattaram.sugave@gmail.com  ",
+        password: "Helloworld@123"
     });
 
     console.log("User", user);
