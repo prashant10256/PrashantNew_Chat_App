@@ -1,21 +1,40 @@
-import { createContext, useState, useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { useCallback } from "react";
+import { createContext, useState, useEffect, useCallback } from "react";
 import { baseUrl, getRequest, postRequest } from "../utils/services";
-import NavBar from "../components/NavBar";
-import Register from "../pages/Register";
-import Login from "../pages/Login";
-import "bootstrap/dist/css/bootstrap.min.css";
-import { Container } from "react-bootstrap";
-import Chat from "../pages/Chat";
-
 
 export const ChatContext = createContext();
 
-export const ChatContextProvider = ({user,children})=>{
-    const [userChats, setUserChats] = useState(null);
+export const ChatContextProvider = ({ user, children }) => {
+  const [userChats, setUserChats] = useState(null);
   const [isUserChatsLoading, setIsUserChatsLoading] = useState(null);
   const [userChatsError, setUserChatsError] = useState(null);
+  const [potentialChats, setPotentialChats] = useState([]);
   
+  useEffect(() => {
+    const getUsers = async () => {
+      const response = await getRequest(`${baseUrl}/users`);
+
+      if (response.error) {
+        return console.log("Error fetching users", response);
+      }
+      const pChats = response.filter((u) => {
+        let isChatCreated = false;
+
+        if (user?._id === u._id) return false;
+
+        if (userChats) {
+          isChatCreated = userChats?.some((chat) => {
+            return chat.members[0] === u._id || chat.members[1] === u._id;
+          });
+        }
+
+        return !isChatCreated;
+      });
+
+      setPotentialChats(pChats);
+    };
+    getUsers();
+  }, [userChats]);
 
   useEffect(() => {
     const getUserChats = async () => {
@@ -38,15 +57,33 @@ export const ChatContextProvider = ({user,children})=>{
     getUserChats();
   }, [user]);
 
-  
-return (
+  const createChat = useCallback(async (firstId, secondId) => {
+    const response = await postRequest(
+      `${baseUrl}/chats`,
+      JSON.stringify({
+        firstId,
+        secondId,
+      })
+    );
 
+    if (response.error) {
+      return console.log("Error creating chat", response);
+    }
 
-    <ChatContext.Provider  value={{
-              userChats,
-              isUserChatsLoading,
-              userChatsError,
-            }}>{children}</ChatContext.Provider>
-)
-}
+    setUserChats((prev) => [...prev, response]);
+  }, []);
 
+  return (
+    <ChatContext.Provider
+      value={{
+        userChats,
+        isUserChatsLoading,
+        userChatsError,
+        potentialChats,
+        createChat,
+      }}
+    >
+      {children}
+    </ChatContext.Provider>
+  );
+};
